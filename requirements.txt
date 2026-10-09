@@ -4,3 +4,4 @@ pydantic
 pandas          # для CSV со свечами
 pytest          # для тестов
 httpx           # для TestClient
+requests

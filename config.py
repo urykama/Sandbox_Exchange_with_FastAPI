@@ -34,11 +34,11 @@ MODE = "test_exchange"
 # ============================================================
 
 # Откуда грузить свечи (CSV)
-CANDLES_FOLDER = "Candles"
+CANDLES_FOLDER = "data/Candles_Binance"     # ← переименовали
 CANDLES_FILE = "BTCUSDT_1h.csv"
 
 # Куда писать результаты
-RESULTS_FOLDER = "Results"
+RESULTS_FOLDER = "data/Results"
 TRADES_CSV = "trades.csv"           # все закрытые сделки
 EQUITY_CSV = "equity.csv"           # кривая баланса по свечам
 
@@ -77,7 +77,7 @@ SIZE_PRECISION = 6
 # ============================================================
 
 # Таймфрейм свечей: 1m, 5m, 15m, 1h, 4h, 1d
-TIMEFRAME = "1h"
+TIMEFRAME = "5m"
 
 # С какой свечи начинать (разогрев индикаторов)
 START_CANDLE = 0
@@ -148,10 +148,7 @@ LOG_REQUESTS = False
 # ПРОИЗВОДНЫЕ (считаются из параметров выше)
 # ============================================================
 
-# Полные пути
-CANDLES_PATH = f"{CANDLES_FOLDER}/{CANDLES_FILE}"
-TRADES_PATH = f"{RESULTS_FOLDER}/{TRADES_CSV}"
-EQUITY_PATH = f"{RESULTS_FOLDER}/{EQUITY_CSV}"
+
 
 # Комиссия как множитель (для быстрого расчёта)
 COMMISSION_MULT = 1.0 - COMMISSION_PCT
@@ -168,4 +165,11 @@ USE_API = MODE in ("test_exchange", "demo", "real")
 
 # === Данные Binance (только для скрипта загрузки) ===
 BINANCE_API_URL = "https://api.binance.com/api/v3"
-BINANCE_KLINES_LIMIT = 1000
+BINANCE_KLINES_LIMIT = 1000          # макс за один запрос
+CANDLES_TARGET_COUNT = 100_000       # сколько свечей хотим
+BINANCE_REQUEST_PAUSE = 0.2          # пауза между запросами, сек
+
+# Полный путь к CSV со свечами
+CANDLES_PATH = f"{CANDLES_FOLDER}/{SYMBOL}/{TIMEFRAME}.csv"
+TRADES_PATH = f"{RESULTS_FOLDER}/trades.csv"
+EQUITY_PATH = f"{RESULTS_FOLDER}/equity.csv"
