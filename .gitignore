@@ -1,0 +1,55 @@
+# === Данные (генерируемое, у каждого своё) ===
+data/*
+!data/Candles/
+!data/Results/
+data/Candles/*
+data/Results/*
+!data/Candles/.gitkeep
+!data/Results/.gitkeep
+
+# === Результаты прогонов ===
+Results/
+*.log
+
+# === Python (кэш, байткод) ===
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# === Виртуальное окружение ===
+venv/
+.venv/
+env/
+ENV/
+
+# === Тесты и покрытие ===
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# === Приватное (никогда не коммитить) ===
+.env
+.env.*
+*.key
+*.pem
+secrets.json
+config_local.py
+
+# === IDE и редакторы ===
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# === ОС ===
+.DS_Store
+Thumbs.db
+desktop.ini
