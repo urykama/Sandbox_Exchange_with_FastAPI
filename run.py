@@ -51,3 +51,10 @@ if __name__ == "__main__":
     from multiprocessing import freeze_support
     freeze_support()
     main()
+'''
+    urykama @ gmail.com
+git config --global user.name "urykama"
+git config --global user.email "urykama@gmail.com"
+https://github.com/urykama/BingX-Trading-Bot_Android
+git remote add origin https://github.com/urykama/Sandbox_Exchange_with_FastAPI.git
+'''
