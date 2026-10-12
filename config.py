@@ -41,6 +41,8 @@ CANDLES_FILE = "BTCUSDT_1h.csv"
 RESULTS_FOLDER = "data/Results"
 TRADES_CSV = "trades.csv"           # все закрытые сделки
 EQUITY_CSV = "equity.csv"           # кривая баланса по свечам
+TRADES_PATH = f"{RESULTS_FOLDER}/trades.csv"
+CANDLES_SAR_FOLDER = "data/Candles_with_SAR"      # Папка со свечами + SAR
 
 # Формат CSV со свечами (какие колонки ждём)
 # Пример: timestamp,open,high,low,close,volume
@@ -124,7 +126,7 @@ API_PORT = 8000
 API_PREFIX = ""
 
 # Автоперезапуск при изменении кода (только для разработки)
-API_RELOAD = True
+API_RELOAD = False
 
 # URL, куда стучится бот
 # Локально: http://127.0.0.1:8000
