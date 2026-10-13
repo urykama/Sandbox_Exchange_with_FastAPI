@@ -48,7 +48,7 @@ async def order_create(
     req = OrderCreateRequest(**body)
 
     order_id = str(uuid.uuid4())
-    now_ms = int(time.time() * 1000)
+    now_ms = state.candles[state.current_idx]["timestamp"]
 
     # === Сохраняем ордер в state ===
     order = {
@@ -69,6 +69,7 @@ async def order_create(
         "status": "New",
     }
     state.orders.append(order)
+    state.orders_history.append(order)   # ← добавить
 
     # print(f"📤 orderId={order_id}, всего ордеров: {len(state.orders)}")
     # print("=" * 60 + "\n", flush=True)
@@ -116,6 +117,7 @@ async def order_cancel_all(
             match = False
 
         if match:
+            order["status"] = "Cancelled"  # ← добавить
             cancelled.append({
                 "orderId": order["orderId"],
                 "orderLinkId": order["orderLinkId"],

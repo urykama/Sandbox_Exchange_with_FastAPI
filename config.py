@@ -43,6 +43,7 @@ TRADES_CSV = "trades.csv"           # все закрытые сделки
 EQUITY_CSV = "equity.csv"           # кривая баланса по свечам
 TRADES_PATH = f"{RESULTS_FOLDER}/trades.csv"
 CANDLES_SAR_FOLDER = "data/Candles_with_SAR"      # Папка со свечами + SAR
+ORDERS_PATH = f"{RESULTS_FOLDER}/orders.csv"
 
 # Формат CSV со свечами (какие колонки ждём)
 # Пример: timestamp,open,high,low,close,volume

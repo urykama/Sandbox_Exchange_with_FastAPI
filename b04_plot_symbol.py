@@ -6,8 +6,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from config import CANDLES_SAR_FOLDER, TIMEFRAME, TRADES_PATH
-
+from config import CANDLES_SAR_FOLDER, TIMEFRAME, TRADES_PATH, ORDERS_PATH
 
 def plot_symbol(symbol):
     # 1. Свечи + SAR
@@ -113,6 +112,39 @@ def plot_symbol(symbol):
         # Линия
         lines_x.extend([entry_dt, exit_dt, None])
         lines_y.extend([entry_price, exit_price, None])
+
+    # 7.5. Ордера
+    orders_path = ORDERS_PATH
+    if os.path.exists(orders_path):
+        orders = pd.read_csv(orders_path)
+        symbol_orders = orders[orders['symbol'] == symbol]
+
+        ord_x, ord_y, ord_text, ord_color, ord_symbol = [], [], [], [], []
+
+        for _, o in symbol_orders.iterrows():
+            ts = int(o['createdAt'])
+            price = float(o['triggerPrice'])
+
+            ord_x.append(pd.to_datetime(ts, unit='ms'))
+            ord_y.append(price)
+            ord_text.append(f"{o['side']} {o['status']}")
+            ord_color.append(
+                'green' if o['status'] == 'Filled'
+                else 'red' if o['status'] == 'Cancelled'
+                else 'gray'
+            )
+            ord_symbol.append(
+                'x' if o['side'] == 'Buy' else 'cross'
+            )
+
+        fig.add_trace(go.Scatter(
+            x=ord_x, y=ord_y,
+            mode='markers',
+            marker=dict(color=ord_color, size=7, symbol='x'),
+            name='Orders',
+            text=ord_text,
+            hovertemplate='%{text}<br>%{y:.2f}<extra></extra>',
+        ), row=1, col=1)
 
     # Линии
     fig.add_trace(go.Scatter(

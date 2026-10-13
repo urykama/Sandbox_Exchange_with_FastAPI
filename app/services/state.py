@@ -11,10 +11,11 @@ class ExchangeState:
     initial_balance: float = 10_000.0
     balance: float = 10_000.0
     realized_pnl: float = 0.0
-
+    # === Торговля ===
     symbol: str = "BTCUSDT"
     position: dict | None = None
-    orders: list = field(default_factory=list)
+    orders: list = field(default_factory=list)  # активные
+    orders_history: list = field(default_factory=list)  # все
 
     candles: list = field(default_factory=list)
     current_idx: int = 0
@@ -30,6 +31,8 @@ class ExchangeState:
         self.current_idx = 0
         self.trades = []
         self.equity_curve = []
+        self.orders = []
+        self.orders_history = []
 
     def __repr__(self) -> str:
         return (

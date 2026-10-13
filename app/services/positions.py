@@ -3,7 +3,8 @@
 
 from app.services.state import ExchangeState
 from app.services.balance import calc_pnl, calc_pnl_pct
-
+from config import TRADES_PATH, ORDERS_PATH
+from app.services.trades import save_all
 
 def open_position(
     state: ExchangeState,
@@ -66,10 +67,8 @@ def close_position(
     )
 
     # Сохранение раз в N сделок
-    from config import TRADES_PATH
-    from app.services.trades import maybe_save
-    maybe_save(state, TRADES_PATH)
-
+    if len(state.trades) % 20 == 0:
+        save_all(state, TRADES_PATH, ORDERS_PATH)
     return float(order["qty"]) - position["size"]
 
 def process_order(state: ExchangeState, order: dict) -> None:
