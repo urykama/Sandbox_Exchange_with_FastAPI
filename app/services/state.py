@@ -8,8 +8,8 @@ from dataclasses import dataclass, field
 class ExchangeState:
     """Состояние тест-биржи."""
 
-    initial_balance: float = 10_000.0
-    balance: float = 10_000.0
+    initial_balance: float = 2000.0
+    balance: float = 2000.0
     realized_pnl: float = 0.0
     # === Торговля ===
     symbol: str = "BTCUSDT"

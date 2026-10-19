@@ -7,7 +7,7 @@
 """
 
 from app.services.state import ExchangeState
-
+from config import INITIAL_BALANCE
 
 # Единственный объект состояния
 _state: ExchangeState | None = None
@@ -17,5 +17,5 @@ def get_state() -> ExchangeState:
     """Вернуть текущее состояние. Создать при первом запросе."""
     global _state
     if _state is None:
-        _state = ExchangeState()
+        _state = ExchangeState(initial_balance=INITIAL_BALANCE)
     return _state

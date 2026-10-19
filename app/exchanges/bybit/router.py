@@ -29,60 +29,6 @@ from app.services.orders import check_triggers
 router = APIRouter(prefix="/v5", tags=["bybit"])
 
 
-@router.post("/order/create", response_model=OrderCreateResponse)
-async def order_create(
-    request: Request,
-    state: ExchangeState = Depends(get_state),
-    x_bapi_api_key: str | None = Header(None, alias="X-BAPI-API-KEY"),
-    x_bapi_sign: str | None = Header(None, alias="X-BAPI-SIGN"),
-    x_bapi_timestamp: str | None = Header(None, alias="X-BAPI-TIMESTAMP"),
-    x_bapi_recv_window: str | None = Header(None, alias="X-BAPI-RECV-WINDOW"),
-) -> OrderCreateResponse:
-    body = await request.json()
-
-    # print("\n" + "=" * 60)
-    # print("📥 POST /v5/order/create")
-    # print(f"   BODY: {body}")
-    # print("=" * 60, flush=True)
-
-    req = OrderCreateRequest(**body)
-
-    order_id = str(uuid.uuid4())
-    now_ms = state.candles[state.current_idx]["timestamp"]
-
-    # === Сохраняем ордер в state ===
-    order = {
-        "orderId": order_id,
-        "orderLinkId": req.orderLinkId or "",
-        "category": req.category,
-        "symbol": req.symbol,
-        "side": req.side,
-        "orderType": req.orderType,
-        "qty": req.qty,
-        "price": req.price,
-        "triggerPrice": req.triggerPrice,
-        "triggerBy": req.triggerBy,
-        "triggerDirection": req.triggerDirection,
-        "reduceOnly": req.reduceOnly,
-        "timeInForce": req.timeInForce,
-        "createdAt": now_ms,
-        "status": "New",
-    }
-    state.orders.append(order)
-    state.orders_history.append(order)   # ← добавить
-
-    # print(f"📤 orderId={order_id}, всего ордеров: {len(state.orders)}")
-    # print("=" * 60 + "\n", flush=True)
-
-    return OrderCreateResponse(
-        retCode=0,
-        retMsg="OK",
-        result=OrderResult(orderId=order_id, orderLinkId=order["orderLinkId"]),
-        retExtInfo={},
-        time=now_ms,
-    )
-
-
 @router.get("/order/list")
 def order_list(state: ExchangeState = Depends(get_state)) -> dict:
     """Показать все принятые ордера (не по стандарту Bybit — для отладки)."""
@@ -161,62 +107,6 @@ def market_time(state: ExchangeState = Depends(get_state)) -> MarketTimeResponse
 
 
 # ============================================================
-# Kline
-# ============================================================
-
-@router.get("/market/kline", response_model=KlineResponse)
-def market_kline(
-    category: str,
-    symbol: str,
-    interval: str,
-    limit: int = 3,
-    state: ExchangeState = Depends(get_state),
-) -> KlineResponse:
-    """
-    Свечи до current_idx.
-
-    Bybit отдаёт от НОВЫХ к СТАРЫМ — сохраняем этот порядок.
-    current_idx += 1 (двигаем время).
-    """
-
-    # Проверка триггеров
-    check_triggers(state)
-
-    # Двигаем время
-    state.current_idx += 1
-
-    # Проверка, чтобы хватило свечей для прогрева
-    if state.current_idx < limit:
-        state.current_idx = limit
-
-    # Последние limit свечей до idx
-    chunk = state.candles[state.current_idx - limit:state.current_idx]
-
-    # Bybit-формат свечи: [start, open, high, low, close, volume, turnover]
-    # Порядок: от новых к старым
-    klines = []
-    # for c in reversed(chunk):
-    for c in chunk:
-        klines.append([
-            str(c["timestamp"]),
-            str(c["open"]),
-            str(c["high"]),
-            str(c["low"]),
-            str(c["close"]),
-            str(c["volume"]),
-            "0",  # turnover — не считаем
-        ])
-
-    return KlineResponse(
-        retCode=0,
-        retMsg="OK",
-        result=KlineResult(symbol=symbol, category=category, list=klines),
-        retExtInfo={},
-        time=int(time.time() * 1000),
-    )
-
-
-# ============================================================
 # Position list
 # ============================================================
 
@@ -253,6 +143,116 @@ def position_list(
         time=int(time.time() * 1000),
     )
 
+# ============================================================
+# Kline
+# ============================================================
+
+@router.get("/market/kline", response_model=KlineResponse)
+def market_kline(
+    category: str,
+    symbol: str,
+    interval: str,
+    limit: int = 3,
+    state: ExchangeState = Depends(get_state),
+) -> KlineResponse:
+    """
+    Свечи до current_idx.
+
+    Bybit отдаёт от НОВЫХ к СТАРЫМ — сохраняем этот порядок.
+    current_idx += 1 (двигаем время).
+    """
+
+    # Проверка, чтобы хватило свечей для прогрева
+    if state.current_idx < limit:
+        state.current_idx = limit
+
+    # Последние limit свечей до idx
+    chunk = state.candles[state.current_idx - limit:state.current_idx]
+
+    # Bybit-формат свечи: [start, open, high, low, close, volume, turnover]
+    # Порядок: от новых к старым
+    klines = []
+    # for c in reversed(chunk):
+    for c in chunk:
+        klines.append([
+            str(c["timestamp"]),
+            str(c["open"]),
+            str(c["high"]),
+            str(c["low"]),
+            str(c["close"]),
+            str(c["volume"]),
+            "0",  # turnover — не считаем
+        ])
+
+    return KlineResponse(
+        retCode=0,
+        retMsg="OK",
+        result=KlineResult(symbol=symbol, category=category, list=klines),
+        retExtInfo={},
+        time=int(time.time() * 1000),
+    )
+
+
+@router.post("/order/create", response_model=OrderCreateResponse)
+async def order_create(
+    request: Request,
+    state: ExchangeState = Depends(get_state),
+    x_bapi_api_key: str | None = Header(None, alias="X-BAPI-API-KEY"),
+    x_bapi_sign: str | None = Header(None, alias="X-BAPI-SIGN"),
+    x_bapi_timestamp: str | None = Header(None, alias="X-BAPI-TIMESTAMP"),
+    x_bapi_recv_window: str | None = Header(None, alias="X-BAPI-RECV-WINDOW"),
+) -> OrderCreateResponse:
+    body = await request.json()
+
+    # print("\n" + "=" * 60)
+    # print("📥 POST /v5/order/create")
+    # print(f"   BODY: {body}")
+    # print("=" * 60, flush=True)
+
+    req = OrderCreateRequest(**body)
+
+    order_id = str(uuid.uuid4())
+    now_ms = state.candles[state.current_idx]["timestamp"]
+
+    # === Сохраняем ордер в state ===
+    order = {
+        "orderId": order_id,
+        "orderLinkId": req.orderLinkId or "",
+        "category": req.category,
+        "symbol": req.symbol,
+        "side": req.side,
+        "orderType": req.orderType,
+        "qty": req.qty,
+        "price": req.price,
+        "triggerPrice": req.triggerPrice,
+        "triggerBy": req.triggerBy,
+        "triggerDirection": req.triggerDirection,
+        "reduceOnly": req.reduceOnly,
+        "timeInForce": req.timeInForce,
+        "createdAt": now_ms,
+        "status": "New",
+    }
+    state.orders.append(order)
+    state.orders_history.append(order)   # ← добавить
+
+    # print(f"📤 orderId={order_id}, всего ордеров: {len(state.orders)}")
+    # print("=" * 60 + "\n", flush=True)
+
+    # Двигаем время
+    state.current_idx += 1
+
+    # Проверка триггеров
+    check_triggers(state)
+
+    return OrderCreateResponse(
+        retCode=0,
+        retMsg="OK",
+        result=OrderResult(orderId=order_id, orderLinkId=order["orderLinkId"]),
+        retExtInfo={},
+        time=now_ms,
+    )
+
+
 @router.post("/debug/open")
 def debug_open(
     side: str = "long",
@@ -262,4 +262,5 @@ def debug_open(
     state: ExchangeState = Depends(get_state),
 ):
     from app.services.positions import open_position
-    return open_position(state, side, size, symbol, price)
+    open_position(state, side, size, symbol, price)
+    return state.position

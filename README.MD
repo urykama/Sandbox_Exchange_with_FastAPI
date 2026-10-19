@@ -84,3 +84,8 @@ pytest tests/
 + config.py
 + requirements.tx
 + .gitignore
+
+напомни через консоль открыть первую позицию
+Открыть позицию через консоль
+Триггерный ордер
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/v5/debug/open?side=long&size=0.001&price=114600" -Method Post

@@ -70,4 +70,4 @@ def save_orders(state: ExchangeState, path: str) -> int:
 def save_all(state: ExchangeState, trades_path: str, orders_path: str) -> None:
     n_trades = save_trades(state, trades_path)
     n_orders = save_orders(state, orders_path)
-    print(f"💾 CSV: {n_trades} сделок, {n_orders} ордеров", flush=True)
+    # print(f"💾 CSV: {n_trades} сделок, {n_orders} ордеров", flush=True)
