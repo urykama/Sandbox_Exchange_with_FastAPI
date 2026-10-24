@@ -17,13 +17,13 @@ def close_position(
     state: ExchangeState,
     order: dict,
     reason: str = "manual",
-) -> float:
+) -> None:
     """
-    Закрывает позицию (полностью или частично).
+    Закрывает позицию полностью или частично.
 
-    Возвращает остаток объёма ордера.
-    0 — ордер весь ушёл в закрытие.
-    >0 — остаток, на который открыть встречную позицию.
+    Учитывает reduceOnly:
+    - True  → остаток ордера сгорает (order["qty"] = "0")
+    - False → остаток остаётся в ордере для разворота
     """
     price = float(order["triggerPrice"])
     order_qty = float(order["qty"])
@@ -67,14 +67,16 @@ def close_position(
     else:
         state.position["size"] = pos_size - close_size
 
-    # Уменьшить ордер
-    order["qty"] = str(order_qty - close_size)
+    # Остаток ордера
+    if order.get("reduceOnly"):
+        order["qty"] = "0"
+    else:
+        order["qty"] = str(order_qty - close_size)
     order["status"] = "PartiallyFilled" if float(order["qty"]) > 0 else "Filled"
 
     # Сохранение раз в N сделок
-    # if len(state.trades) % 5 == 0:
-    save_all(state, TRADES_PATH, ORDERS_PATH)
-    return order_qty - close_size
+    if len(state.trades) % 5 == 0:
+        save_all(state, TRADES_PATH, ORDERS_PATH)
 
 
 def open_position(
@@ -95,7 +97,7 @@ def open_position(
 
     print(
         f"📈 Открыта: {side:5}  {size:10.3} @ {price} | "
-        f"balance={state.balance:.2f}",
+        f"bal={state.balance:.2f}",
         end='',
     )
     return state.position

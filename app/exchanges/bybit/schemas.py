@@ -63,6 +63,28 @@ class CancelAllResponse(BaseModel):
     retExtInfo: dict = Field(default_factory=dict)
     time: int
 
+# === Cancel one ===
+
+class OrderCancelRequest(BaseModel):
+    """POST /v5/order/cancel — тело."""
+
+    category: str
+    symbol: str
+    orderId: str | None = None
+    orderLinkId: str | None = None
+
+
+class CancelResult(BaseModel):
+    orderId: str
+    orderLinkId: str = ""
+
+
+class CancelResponse(BaseModel):
+    retCode: int
+    retMsg: str
+    result: CancelResult
+    retExtInfo: dict = Field(default_factory=dict)
+    time: int
 
 
 # === Market time ===

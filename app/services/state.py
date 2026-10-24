@@ -37,7 +37,7 @@ class ExchangeState:
     def __repr__(self) -> str:
         return (
             f"ExchangeState("
-            f"balance={self.balance:.2f}, "
+            f"bal={self.balance:.2f}, "
             f"pnl={self.realized_pnl:.2f}, "
             f"idx={self.current_idx}/{len(self.candles)}, "
             f"position={'yes' if self.position else 'no'})"

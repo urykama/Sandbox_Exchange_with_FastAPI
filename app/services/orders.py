@@ -42,6 +42,8 @@ def process_order(state: ExchangeState, order: dict) -> None:
 
     if state.position is not None:
         if state.position["side"] == side:
+            print(state)
+            print(order)
             average_position(state, order)  # усреднение (потом)
             return
         else:
@@ -49,4 +51,3 @@ def process_order(state: ExchangeState, order: dict) -> None:
 
     if float(order["qty"]) > 0:
         open_position(state, side, float(order["qty"]), symbol, price)
-        order["status"] = "Filled"

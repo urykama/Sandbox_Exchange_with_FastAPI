@@ -16,6 +16,9 @@ from app.exchanges.bybit.schemas import (
     CancelAllResponse,
     CancelAllResult,
     CancelledOrder,
+    CancelResponse,
+    OrderCancelRequest,
+    CancelResult,
     MarketTimeResponse,
     MarketTimeResult,
     KlineResponse,
@@ -81,7 +84,48 @@ async def order_cancel_all(
         time=int(time.time() * 1000),
     )
 
+@router.post("/order/cancel", response_model=CancelResponse)
+async def order_cancel(
+    request: Request,
+    state: ExchangeState = Depends(get_state),
+) -> CancelResponse:
+    body = await request.json()
+    req = OrderCancelRequest(**body)
 
+    target = None
+    for order in state.orders:
+        if req.orderId and order["orderId"] == req.orderId:
+            target = order
+            break
+        if req.orderLinkId and order["orderLinkId"] == req.orderLinkId:
+            target = order
+            break
+
+    # Если не нашли — Bybit возвращает ошибку 110001
+    if target is None:
+        return CancelResponse(
+            retCode=110001,
+            retMsg="Order does not exist.",
+            result=CancelResult(orderId=req.orderId or "", orderLinkId=req.orderLinkId or ""),
+            retExtInfo={},
+            time=int(time.time() * 1000),
+        )
+
+    target["status"] = "Cancelled"
+    state.orders.remove(target)
+
+    # print(f"🗑️  Отменён: {target['orderId']}", flush=True)
+
+    return CancelResponse(
+        retCode=0,
+        retMsg="OK",
+        result=CancelResult(
+            orderId=target["orderId"],
+            orderLinkId=target["orderLinkId"],
+        ),
+        retExtInfo={},
+        time=int(time.time() * 1000),
+    )
 
 
 # ============================================================
@@ -117,6 +161,14 @@ def position_list(
     state: ExchangeState = Depends(get_state),
 ) -> PositionListResponse:
     """Текущая позиция (если есть)."""
+
+    # Двигаем время
+    state.current_idx += 1
+
+    # Проверка триггеров
+    check_triggers(state)
+
+
     positions = []
 
     if state.position is not None:
@@ -195,19 +247,14 @@ def market_kline(
 
 @router.post("/order/create", response_model=OrderCreateResponse)
 async def order_create(
-    request: Request,
-    state: ExchangeState = Depends(get_state),
-    x_bapi_api_key: str | None = Header(None, alias="X-BAPI-API-KEY"),
-    x_bapi_sign: str | None = Header(None, alias="X-BAPI-SIGN"),
-    x_bapi_timestamp: str | None = Header(None, alias="X-BAPI-TIMESTAMP"),
-    x_bapi_recv_window: str | None = Header(None, alias="X-BAPI-RECV-WINDOW"),
+        request: Request,
+        state: ExchangeState = Depends(get_state),
+        x_bapi_api_key: str | None = Header(None, alias="X-BAPI-API-KEY"),
+        x_bapi_sign: str | None = Header(None, alias="X-BAPI-SIGN"),
+        x_bapi_timestamp: str | None = Header(None, alias="X-BAPI-TIMESTAMP"),
+        x_bapi_recv_window: str | None = Header(None, alias="X-BAPI-RECV-WINDOW"),
 ) -> OrderCreateResponse:
     body = await request.json()
-
-    # print("\n" + "=" * 60)
-    # print("📥 POST /v5/order/create")
-    # print(f"   BODY: {body}")
-    # print("=" * 60, flush=True)
 
     req = OrderCreateRequest(**body)
 
@@ -232,17 +279,27 @@ async def order_create(
         "createdAt": now_ms,
         "status": "New",
     }
-    state.orders.append(order)
-    state.orders_history.append(order)   # ← добавить
 
-    # print(f"📤 orderId={order_id}, всего ордеров: {len(state.orders)}")
-    # print("=" * 60 + "\n", flush=True)
+    # ============================================================
+    # 1. МАРКЕТ ОРДЕР (без триггера) — исполняем СРАЗУ
+    # ============================================================
+    if req.orderType == "Market" and req.triggerPrice is None:
+        # Подменяем triggerPrice на open текущей свечи для process_order
+        order["triggerPrice"] = str(state.candles[state.current_idx]["open"])
 
-    # Двигаем время
-    state.current_idx += 1
+        # Добавляем в историю (для графика), но НЕ в активные
+        state.orders_history.append(order)
 
-    # Проверка триггеров
-    check_triggers(state)
+        # Вызываем диспетчер напрямую
+        from app.services.orders import process_order
+        process_order(state, order)
+
+    # ============================================================
+    # 2. ТРИГГЕРНЫЙ ОРДЕР — сохраняем и ждём
+    # ============================================================
+    elif req.triggerPrice is not None:
+        state.orders.append(order)
+        state.orders_history.append(order)
 
     return OrderCreateResponse(
         retCode=0,
@@ -251,7 +308,6 @@ async def order_create(
         retExtInfo={},
         time=now_ms,
     )
-
 
 @router.post("/debug/open")
 def debug_open(

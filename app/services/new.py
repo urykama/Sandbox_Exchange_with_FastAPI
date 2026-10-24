@@ -24,7 +24,7 @@ def open_position(
 
     print(
         f"📈 Открыта: {side:5}  {size:10.3} @ {price} | "
-        f"balance={state.balance:.2f}",
+        f"bal={state.balance:.2f}",
         flush=True,
     )
     return state.position
@@ -34,13 +34,13 @@ def close_position(
     state: ExchangeState,
     order: dict,
     reason: str = "manual",
-) -> float:
+) -> None:
     """
-    Закрывает позицию (полностью или частично).
+    Закрывает позицию полностью или частично.
 
-    Возвращает остаток объёма ордера.
-    0 — ордер весь ушёл в закрытие.
-    >0 — остаток, на который открыть встречную позицию.
+    Учитывает reduceOnly:
+    - True  → остаток ордера сгорает (order["qty"] = "0")
+    - False → остаток остаётся в ордере для разворота
     """
     price = float(order["triggerPrice"])
     order_qty = float(order["qty"])
@@ -74,7 +74,7 @@ def close_position(
 
     print(
         f"💰 {trade['exit_time']} | {close_size:10.3} @ {price}  "
-        f"PnL={pnl:+.4f} | balance={state.balance:.2f}",
+        f"PnL={pnl:+.4f} | bal={state.balance:.2f}",
         flush=True,
     )
 
@@ -83,10 +83,14 @@ def close_position(
         state.position = None
     else:
         state.position["size"] = pos_size - close_size
-    # Сохранение раз в N сделок
-    if len(state.trades) % 20 == 0:
-        save_all(state, TRADES_PATH, ORDERS_PATH)
-    return order_qty - close_size
+
+    # Остаток ордера
+    if order.get("reduceOnly"):
+        order["qty"] = "0"
+    else:
+        order["qty"] = str(order_qty - close_size)
+
+    order["status"] = "Filled" if float(order["qty"]) == 0 else "PartiallyFilled"
 
 def process_order(state: ExchangeState, order: dict) -> None:
     symbol = order["symbol"]
