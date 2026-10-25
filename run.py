@@ -21,7 +21,6 @@ def ensure_folders() -> None:
     os.makedirs(CANDLES_FOLDER, exist_ok=True)
     os.makedirs(RESULTS_FOLDER, exist_ok=True)
 
-
 def print_banner() -> None:
     line = "=" * 60
     print(line)

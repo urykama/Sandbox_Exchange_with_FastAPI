@@ -9,12 +9,13 @@ class ExchangeState:
     """Состояние тест-биржи."""
 
     initial_balance: float = 2000.0
-    balance: float = 2000.0
+    balance: float = field(init=False)   # инициализируется в __post_init__
     realized_pnl: float = 0.0
+    
     # === Торговля ===
     symbol: str = "BTCUSDT"
     position: dict | None = None
-    orders: list = field(default_factory=list)  # активные
+    orders: list = field(default_factory=list)          # активные
     orders_history: list = field(default_factory=list)  # все
 
     candles: list = field(default_factory=list)
@@ -23,16 +24,20 @@ class ExchangeState:
     trades: list = field(default_factory=list)
     equity_curve: list = field(default_factory=list)
 
+    def __post_init__(self) -> None:
+        """Устанавливаем balance = initial_balance сразу после создания."""
+        self.balance = self.initial_balance
+
     def reset(self) -> None:
+        """Сброс к начальному состоянию."""
         self.balance = self.initial_balance
         self.realized_pnl = 0.0
         self.position = None
         self.orders = []
+        self.orders_history = []
         self.current_idx = 0
         self.trades = []
         self.equity_curve = []
-        self.orders = []
-        self.orders_history = []
 
     def __repr__(self) -> str:
         return (

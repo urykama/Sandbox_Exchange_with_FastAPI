@@ -37,7 +37,8 @@ def close_position(
     pnl_pct = calc_pnl_pct(position["entry_price"], price, position["side"])
 
     # Баланс
-    state.balance += close_size * position["entry_price"] + pnl
+    # state.balance += close_size * position["entry_price"] + pnl
+    state.balance += pnl
     state.realized_pnl += pnl
 
     trade = {
@@ -56,8 +57,8 @@ def close_position(
     state.trades.append(trade)
 
     print(
-        f"💰 {trade['exit_time']} | {close_size:10.3} @ {price}  "
-        f"PnL={pnl:+.4f} | balance={state.balance:.2f}",
+        f"💰 \t\t {trade['exit_time']} | {close_size:8.6g} @ {price:8.6g}  "
+        f"PnL={pnl:+.3f} | bal={state.balance:.3f}",
         flush=True,
     )
 
@@ -93,11 +94,8 @@ def open_position(
         "entry_price": price,
         "entry_time": state.candles[state.current_idx]["timestamp"],
     }
-    state.balance -= size * price
+    # state.balance -= size * price
 
     print(
-        f"📈 Открыта: {side:5}  {size:10.3} @ {price} | "
-        f"bal={state.balance:.2f}",
-        end='',
-    )
+        f"📈 \t Открыта: {side:5}  {size:8.6g} @ {price:8.6g}")
     return state.position

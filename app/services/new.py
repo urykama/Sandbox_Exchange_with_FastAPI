@@ -23,8 +23,9 @@ def open_position(
     state.balance -= size * price
 
     print(
-        f"📈 Открыта: {side:5}  {size:10.3} @ {price} | "
-        f"bal={state.balance:.2f}",
+        f"📈 \t Открыта: {side:5}  {size:10.3} @ {price} | "
+        f"bal={state.balance:.2f}" ,
+        end='',
         flush=True,
     )
     return state.position
@@ -73,8 +74,8 @@ def close_position(
     state.trades.append(trade)
 
     print(
-        f"💰 {trade['exit_time']} | {close_size:10.3} @ {price}  "
-        f"PnL={pnl:+.4f} | bal={state.balance:.2f}",
+        f"💰 \t\t {trade['exit_time']} | {close_size:10.3} @ {price}  "
+        f"PnL={pnl:+.2f} | bal={state.balance:.2f}",
         flush=True,
     )
 

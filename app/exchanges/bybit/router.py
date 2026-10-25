@@ -27,7 +27,7 @@ from app.exchanges.bybit.schemas import (
     PositionListResult,
     PositionInfo,
 )
-from app.services.orders import check_triggers
+from app.services.orders import check_triggers, check_limit_orders
 
 router = APIRouter(prefix="/v5", tags=["bybit"])
 
@@ -167,7 +167,7 @@ def position_list(
 
     # Проверка триггеров
     check_triggers(state)
-
+    check_limit_orders(state)   # ← добавить
 
     positions = []
 
@@ -295,9 +295,9 @@ async def order_create(
         process_order(state, order)
 
     # ============================================================
-    # 2. ТРИГГЕРНЫЙ ОРДЕР — сохраняем и ждём
+    # 2. ЛИМИТНЫЕ И ТРИГГЕРНЫЕ — сохраняем и ждём
     # ============================================================
-    elif req.triggerPrice is not None:
+    elif req.orderType == "Limit" or req.triggerPrice is not None:
         state.orders.append(order)
         state.orders_history.append(order)
 

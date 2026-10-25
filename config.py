@@ -63,6 +63,7 @@ COMMISSION_PCT = 0.001
 
 # Символ по умолчанию
 SYMBOL = "BTCUSDT"
+SYMBOL = "ETHUSDT"
 
 # Минимальный размер ордера (в USDT)
 MIN_ORDER_SIZE = 10.0
@@ -80,7 +81,7 @@ SIZE_PRECISION = 6
 # ============================================================
 
 # Таймфрейм свечей: 1m, 5m, 15m, 1h, 4h, 1d
-TIMEFRAME = "5m"
+TIMEFRAME = "1h"
 
 # С какой свечи начинать (разогрев индикаторов)
 START_CANDLE = 0
@@ -176,3 +177,12 @@ BINANCE_REQUEST_PAUSE = 0.2          # пауза между запросами,
 CANDLES_PATH = f"{CANDLES_FOLDER}/{SYMBOL}/{TIMEFRAME}.csv"
 TRADES_PATH = f"{RESULTS_FOLDER}/trades.csv"
 EQUITY_PATH = f"{RESULTS_FOLDER}/equity.csv"
+
+# === Начальная позиция (открывается при старте) ===
+INITIAL_POSITION = {
+    "symbol": "BTCUSDT",
+    "side": "long",
+    "size": 0.01,
+    "price": 4000.0,
+    # "price": None  # если хочешь открыть по текущей цене
+}

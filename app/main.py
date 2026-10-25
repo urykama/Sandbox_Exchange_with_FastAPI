@@ -3,7 +3,9 @@
 
 from fastapi import FastAPI
 
-from config import PROJECT_NAME, VERSION, CANDLES_PATH
+from config import PROJECT_NAME, VERSION, CANDLES_PATH, INITIAL_POSITION
+from app.services.positions import open_position
+
 from app.core.dependencies import get_state
 from app.services.candles import load_candles
 from app.exchanges.bybit import router as bybit_router
@@ -17,6 +19,17 @@ try:
 except FileNotFoundError as e:
     print(f"⚠️  {e}")
 
+# === Начальная позиция ===
+if INITIAL_POSITION and state.position is None:
+    p = INITIAL_POSITION
+    price = p["price"] if p.get("price") else state.candles[state.current_idx]["open"]
+    open_position(
+        state,
+        side=p["side"],
+        size=float(p["size"]),
+        symbol=p["symbol"],
+        price=float(price),
+    )
 
 app = FastAPI(title=PROJECT_NAME, version=VERSION)
 
