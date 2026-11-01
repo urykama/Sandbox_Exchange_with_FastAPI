@@ -19,6 +19,7 @@ try:
 except FileNotFoundError as e:
     print(f"⚠️  {e}")
 
+state.current_idx = 8
 # === Начальная позиция ===
 if INITIAL_POSITION and state.position is None:
     p = INITIAL_POSITION

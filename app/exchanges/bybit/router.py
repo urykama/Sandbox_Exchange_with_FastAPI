@@ -160,17 +160,16 @@ def position_list(
     symbol: str | None = None,
     state: ExchangeState = Depends(get_state),
 ) -> PositionListResponse:
-    """Текущая позиция (если есть)."""
+    """Текущая позиция. Проверяем ордера на ТЕКУЩЕЙ свече."""
 
-    # Двигаем время
-    state.current_idx += 1
-
+    # print(f"/position/list                = {state.current_idx}")
+    # print("   ДО", state.position)
     # Проверка триггеров
     check_triggers(state)
     check_limit_orders(state)   # ← добавить
 
     positions = []
-
+    # print("После", state.position)
     if state.position is not None:
         pos = state.position
         # Маппинг: long/short → Buy/Sell
@@ -213,13 +212,25 @@ def market_kline(
     Bybit отдаёт от НОВЫХ к СТАРЫМ — сохраняем этот порядок.
     current_idx += 1 (двигаем время).
     """
+    # Двигаем время на новую свечу
+    state.current_idx += 1
+    # print(f"state.current_idx += 1                = {state.current_idx}")
 
     # Проверка, чтобы хватило свечей для прогрева
     if state.current_idx < limit:
         state.current_idx = limit
 
+    # Защита от выхода за границы
+    if state.current_idx >= len(state.candles):
+        # print(f"Закончились свечи, нужно сохранить статистику и можно выходить")
+        return KlineResponse(
+            retCode=0, retMsg="OK",
+            result=KlineResult(symbol=symbol, category=category, list=[]),
+            retExtInfo={}, time=int(time.time() * 1000),
+        )
+
     # Последние limit свечей до idx
-    chunk = state.candles[state.current_idx - limit:state.current_idx]
+    chunk = state.candles[state.current_idx - limit + 1:state.current_idx + 1]
 
     # Bybit-формат свечи: [start, open, high, low, close, volume, turnover]
     # Порядок: от новых к старым
@@ -235,6 +246,13 @@ def market_kline(
             str(c["volume"]),
             "0",  # turnover — не считаем
         ])
+    # Новая свеча только открылась
+    o = klines[-1][1]  # open — это второй элемент (индекс 1)
+    klines[-1] = [klines[-1][0], o, o, o, o, "0", "0"]
+
+    # В этом месте хочу вывести время последней свечи
+    # print(f"Последняя свеча: timestamp = {klines[-1][0]}")
+
 
     return KlineResponse(
         retCode=0,
@@ -254,6 +272,7 @@ async def order_create(
         x_bapi_timestamp: str | None = Header(None, alias="X-BAPI-TIMESTAMP"),
         x_bapi_recv_window: str | None = Header(None, alias="X-BAPI-RECV-WINDOW"),
 ) -> OrderCreateResponse:
+    # print(f"/order/create                = {state.current_idx}")
     body = await request.json()
 
     req = OrderCreateRequest(**body)

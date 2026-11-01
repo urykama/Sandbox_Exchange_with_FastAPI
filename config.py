@@ -14,6 +14,7 @@
   7. Логирование    — уровень, куда писать
 """
 
+
 # ============================================================
 # 1. ОБЩИЕ
 # ============================================================
@@ -33,14 +34,25 @@ MODE = "test_exchange"
 # 2. ДАННЫЕ
 # ============================================================
 
+
+# Символ по умолчанию
+SYMBOL = "BTCUSDT"
+# SYMBOL = "ETHUSDT"
+# SYMBOL = "ALPINEUSDT"
+
+# Таймфрейм свечей: 1m, 5m, 15m, 1h, 4h, 1d
+TIMEFRAME = "1h"
+# TIMEFRAME = "5m"
+
 # Откуда грузить свечи (CSV)
 CANDLES_FOLDER = "data/Candles_Binance"     # ← переименовали
-CANDLES_FILE = "BTCUSDT_1h.csv"
+
 
 # Куда писать результаты
 RESULTS_FOLDER = "data/Results"
 TRADES_CSV = "trades.csv"           # все закрытые сделки
 EQUITY_CSV = "equity.csv"           # кривая баланса по свечам
+POSITIONS_PATH = f"{RESULTS_FOLDER}/positions.csv"
 TRADES_PATH = f"{RESULTS_FOLDER}/trades.csv"
 CANDLES_SAR_FOLDER = "data/Candles_with_SAR"      # Папка со свечами + SAR
 ORDERS_PATH = f"{RESULTS_FOLDER}/orders.csv"
@@ -61,9 +73,6 @@ INITIAL_BALANCE = 100.0
 # 0.001 = 0.1%
 COMMISSION_PCT = 0.001
 
-# Символ по умолчанию
-SYMBOL = "BTCUSDT"
-SYMBOL = "ETHUSDT"
 
 # Минимальный размер ордера (в USDT)
 MIN_ORDER_SIZE = 10.0
@@ -80,8 +89,7 @@ SIZE_PRECISION = 6
 # 4. ТАЙМФРЕЙМ
 # ============================================================
 
-# Таймфрейм свечей: 1m, 5m, 15m, 1h, 4h, 1d
-TIMEFRAME = "1h"
+
 
 # С какой свечи начинать (разогрев индикаторов)
 START_CANDLE = 0
@@ -170,7 +178,8 @@ USE_API = MODE in ("test_exchange", "demo", "real")
 # === Данные Binance (только для скрипта загрузки) ===
 BINANCE_API_URL = "https://api.binance.com/api/v3"
 BINANCE_KLINES_LIMIT = 1000          # макс за один запрос
-CANDLES_TARGET_COUNT = 100_000       # сколько свечей хотим
+# CANDLES_TARGET_COUNT = 100_000       # сколько свечей хотим
+CANDLES_TARGET_COUNT = 3000       # сколько свечей хотим
 BINANCE_REQUEST_PAUSE = 0.2          # пауза между запросами, сек
 
 # Полный путь к CSV со свечами
@@ -183,6 +192,8 @@ INITIAL_POSITION = {
     "symbol": "BTCUSDT",
     "side": "long",
     "size": 0.01,
-    "price": 4000.0,
+    "price": 315.0,
     # "price": None  # если хочешь открыть по текущей цене
 }
+
+# 1514977200000 |    0.999 @  862.609  PnL=-32.903 | bal=-323.117

@@ -133,6 +133,7 @@ def main() -> None:
     unique.sort(key=lambda x: x["timestamp"])
 
     path = Path(CANDLES_FOLDER) / SYMBOL / f"{TIMEFRAME}.csv"
+    # path = f"{Path(CANDLES_FOLDER)}/{SYMBOL}/{TIMEFRAME}.csv"
     save_csv(unique, path)
 
     print()

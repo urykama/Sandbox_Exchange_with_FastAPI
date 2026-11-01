@@ -3,14 +3,53 @@
 
 from app.services.state import ExchangeState
 from app.services.balance import calc_pnl, calc_pnl_pct
-from config import TRADES_PATH, ORDERS_PATH
+from config import TRADES_PATH, ORDERS_PATH, POSITIONS_PATH
 from app.services.trades import save_all
 
 
 def average_position(state: ExchangeState, order: dict) -> None:
-    """Усреднение — пока не реализовано."""
-    print("⚠️  Усреднение не реализовано", flush=True)
+    """Усреднение позиции (добавление в ту же сторону)."""
+    # Если reduceOnly — усреднять нельзя
+    if order.get("reduceOnly"):
+        print("⚠️  reduceOnly: усреднение запрещено", flush=True)
+        order["qty"] = "0"
+        return
 
+    price = float(order["triggerPrice"])
+    qty = float(order["qty"])
+    pos = state.position
+
+    # Новая средняя цена
+    total_size = pos["size"] + qty
+    avg_price = (pos["size"] * pos["entry_price"] + qty * price) / total_size
+
+    # Обновляем позицию
+    pos["size"] = total_size
+    pos["entry_price"] = avg_price
+
+    # Запись в историю
+    state.position_history.append({
+        "time": state.candles[state.current_idx]["timestamp"],
+        "symbol": pos["symbol"],
+        "side": pos["side"],
+        "size": total_size,
+        "entry_price": avg_price,
+    })
+    # entry_time НЕ меняем
+
+    # Списываем деньги за новую часть
+    # state.balance -= qty * price
+
+    # Ордер исполнен
+    order["qty"] = "0"
+    order["status"] = "Filled"
+
+    print(
+        f"📈 Усреднение: +{qty} @ {price} | "
+        f"новая поз: {total_size} @ {avg_price:.2f} | "
+        f"bal={state.balance:.2f}",
+        flush=True,
+    )
 
 
 def close_position(
@@ -57,16 +96,32 @@ def close_position(
     state.trades.append(trade)
 
     print(
-        f"💰 \t\t {trade['exit_time']} | {close_size:8.6g} @ {price:8.6g}  "
-        f"PnL={pnl:+.3f} | bal={state.balance:.3f}",
+        f"💰 {state.balance:.3f}=bal\t\t {trade['exit_time']} | {close_size:8.6g} @ {price:8.6g}  "
+        f"PnL={pnl:+.3f}",
         flush=True,
     )
 
     # Обновить позицию
     if close_size >= pos_size:
         state.position = None
+        # Запись в историю: позиция закрыта
+        state.position_history.append({
+            "time": state.candles[state.current_idx]["timestamp"],
+            "symbol": position["symbol"],
+            "side": "closed",          # маркер, что это закрытие
+            "size": 0.0,
+            "entry_price": price,
+        })
     else:
         state.position["size"] = pos_size - close_size
+        # Запись в историю: частичное закрытие (остаток)
+        state.position_history.append({
+            "time": state.candles[state.current_idx]["timestamp"],
+            "symbol": position["symbol"],
+            "side": position["side"],
+            "size": state.position["size"],
+            "entry_price": position["entry_price"],
+        })
 
     # Остаток ордера
     if order.get("reduceOnly"):
@@ -77,7 +132,7 @@ def close_position(
 
     # Сохранение раз в N сделок
     if len(state.trades) % 5 == 0:
-        save_all(state, TRADES_PATH, ORDERS_PATH)
+        save_all(state, TRADES_PATH, ORDERS_PATH, POSITIONS_PATH)
 
 
 def open_position(
@@ -94,8 +149,16 @@ def open_position(
         "entry_price": price,
         "entry_time": state.candles[state.current_idx]["timestamp"],
     }
-    # state.balance -= size * price
 
-    print(
-        f"📈 \t Открыта: {side:5}  {size:8.6g} @ {price:8.6g}")
+    # Запись в историю
+    state.position_history.append({
+        "time": state.position["entry_time"],
+        "symbol": symbol,
+        "side": side,
+        "size": size,
+        "entry_price": price,
+    })
+
+
+    print(f"📈 \t Открыта: {side:5}  {size:8.6g} @ {price:8.6g}")
     return state.position

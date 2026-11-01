@@ -22,6 +22,7 @@ class ExchangeState:
     current_idx: int = 0
 
     trades: list = field(default_factory=list)
+    position_history: list = field(default_factory=list)  # ← ДОБАВИТЬ
     equity_curve: list = field(default_factory=list)
 
     def __post_init__(self) -> None:
@@ -37,6 +38,7 @@ class ExchangeState:
         self.orders_history = []
         self.current_idx = 0
         self.trades = []
+        self.position_history = []  # ← ДОБАВИТЬ
         self.equity_curve = []
 
     def __repr__(self) -> str:

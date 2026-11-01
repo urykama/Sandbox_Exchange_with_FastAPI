@@ -1,12 +1,13 @@
 # b04_plot_symbol.py
-"""График: свечи + SAR + EP + сделки."""
+"""График: свечи + SAR + EP + сделки + линии позиций + ордера."""
 
 import os
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from config import CANDLES_SAR_FOLDER, TIMEFRAME, TRADES_PATH, ORDERS_PATH
+from config import CANDLES_SAR_FOLDER, TIMEFRAME, TRADES_PATH, ORDERS_PATH, POSITIONS_PATH
+
 
 def plot_symbol(symbol):
     # 1. Свечи + SAR
@@ -74,6 +75,47 @@ def plot_symbol(symbol):
             opacity=0.4,
         ), row=1, col=1)
 
+    # 6.5. Линии позиций (position_history)
+    if os.path.exists(POSITIONS_PATH):
+        positions = pd.read_csv(POSITIONS_PATH)
+        symbol_positions = positions[positions['symbol'] == symbol]
+
+        long_x, long_y = [], []
+        short_x, short_y = [], []
+
+        # Идем от первой записи до предпоследней
+        for i in range(len(symbol_positions) - 1):
+            curr = symbol_positions.iloc[i]
+            next_ = symbol_positions.iloc[i + 1]
+
+            # Координаты для линии: от времени текущей до времени следующей
+            t1 = pd.to_datetime(int(curr['time']), unit='ms')
+            t2 = pd.to_datetime(int(next_['time']), unit='ms')
+
+            # Цена, на которой держали позицию в этот промежуток
+            price = float(curr['entry_price'])
+
+            # Просто раскидываем по цветам
+            if curr['side'] == 'long':
+                long_x.extend([t1, t2, None])
+                long_y.extend([price, price, None])
+            elif curr['side'] == 'short':
+                short_x.extend([t1, t2, None])
+                short_y.extend([price, price, None])
+
+        # Добавляем на график
+        if long_x:
+            fig.add_trace(go.Scatter(
+                x=long_x, y=long_y, mode='lines',
+                line=dict(color='green', width=2), name='Long Position'
+            ), row=1, col=1)
+
+        if short_x:
+            fig.add_trace(go.Scatter(
+                x=short_x, y=short_y, mode='lines',
+                line=dict(color='red', width=2), name='Short Position'
+            ), row=1, col=1)
+
     # 7. Сделки
     entry_x, entry_y, entry_text, entry_color = [], [], [], []
     exit_x, exit_y, exit_text, exit_color = [], [], [], []
@@ -119,32 +161,52 @@ def plot_symbol(symbol):
         orders = pd.read_csv(orders_path)
         symbol_orders = orders[orders['symbol'] == symbol]
 
-        ord_x, ord_y, ord_text, ord_color, ord_symbol = [], [], [], [], []
+        # Несработавшие (открытые/отменённые) — точки
+        ord_x, ord_y, ord_text, ord_color = [], [], [], []
+        # Сработавшие (Filled) — крестики
+        fill_x, fill_y, fill_text, fill_color = [], [], [], []
 
         for _, o in symbol_orders.iterrows():
             ts = int(o['createdAt'])
             price = float(o['triggerPrice'])
+            side = o['side']       # 'Buy' / 'Sell'
+            status = o['status']   # 'Filled' / 'Cancelled' / ...
 
-            ord_x.append(pd.to_datetime(ts, unit='ms'))
-            ord_y.append(price)
-            ord_text.append(f"{o['side']} {o['status']}")
-            ord_color.append(
-                'green' if o['status'] == 'Filled'
-                else 'red' if o['status'] == 'Cancelled'
-                else 'gray'
-            )
-            ord_symbol.append(
-                'x' if o['side'] == 'Buy' else 'cross'
-            )
+            color = 'green' if side == 'Buy' else 'red'
+            x = pd.to_datetime(ts, unit='ms')
 
-        fig.add_trace(go.Scatter(
-            x=ord_x, y=ord_y,
-            mode='markers',
-            marker=dict(color=ord_color, size=7, symbol='x'),
-            name='Orders',
-            text=ord_text,
-            hovertemplate='%{text}<br>%{y:.2f}<extra></extra>',
-        ), row=1, col=1)
+            if status == 'Filled':
+                fill_x.append(x)
+                fill_y.append(price)
+                fill_text.append(f"{side} {status}")
+                fill_color.append(color)
+            else:
+                ord_x.append(x)
+                ord_y.append(price)
+                ord_text.append(f"{side} {status}")
+                ord_color.append(color)
+
+        # Открытые / отменённые — точки (мелкие)
+        if ord_x:
+            fig.add_trace(go.Scatter(
+                x=ord_x, y=ord_y,
+                mode='markers',
+                marker=dict(color=ord_color, size=5, symbol='circle'),
+                name='Orders (open/cancel)',
+                text=ord_text,
+                hovertemplate='%{text}<br>%{y:.2f}<extra></extra>',
+            ), row=1, col=1)
+
+        # Сработавшие — крестики
+        if fill_x:
+            fig.add_trace(go.Scatter(
+                x=fill_x, y=fill_y,
+                mode='markers',
+                marker=dict(color=fill_color, size=9, symbol='x'),
+                name='Orders (filled)',
+                text=fill_text,
+                hovertemplate='%{text}<br>%{y:.2f}<extra></extra>',
+            ), row=1, col=1)
 
     # Линии
     fig.add_trace(go.Scatter(
@@ -156,11 +218,16 @@ def plot_symbol(symbol):
         opacity=0.5,
     ), row=1, col=1)
 
-    # Входы
+    # Входы — крупные стрелки вверх/вниз по стороне сделки
     fig.add_trace(go.Scatter(
         x=entry_x, y=entry_y,
         mode='markers',
-        marker=dict(color=entry_color, size=8, symbol='triangle-up'),
+        marker=dict(
+            color=entry_color,
+            size=14,
+            symbol=['triangle-up' if s == 'LONG' else 'triangle-down' for s in entry_text],
+            line=dict(color='white', width=1),
+        ),
         name='Entry',
         text=entry_text,
         hovertemplate='%{text}<br>Entry: %{y:.2f}<extra></extra>',

@@ -42,7 +42,7 @@ def load_candles(state: ExchangeState, path: str) -> int:
             })
 
     state.candles = candles
-    state.current_idx = 0
+    state.current_idx = 8
 
     return len(candles)
 
@@ -58,9 +58,8 @@ def get_klines(state: ExchangeState, limit: int) -> list:
     Это то, что "видит" бот в момент времени current_idx.
     Будущие свечи не отдаются.
     """
-    end = state.current_idx + 1
-    start = max(0, end - limit)
-    return state.candles[start:end]
+    print(state.current_idx + 1 - limit, state.current_idx + 1)
+    return state.candles[state.current_idx + 1 - limit:state.current_idx + 1]
 
 
 def get_current_candle(state: ExchangeState) -> dict | None:
