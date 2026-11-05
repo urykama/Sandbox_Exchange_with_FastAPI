@@ -1,6 +1,7 @@
 # app/exchanges/bybit/router.py
 """Bybit-совместимые эндпоинты."""
-
+import os
+import signal
 import time
 import uuid
 
@@ -222,7 +223,30 @@ def market_kline(
 
     # Защита от выхода за границы
     if state.current_idx >= len(state.candles):
-        # print(f"Закончились свечи, нужно сохранить статистику и можно выходить")
+        from app.services.trades import save_all, print_statistics
+
+        # Сохраняем всё в файлы
+        from config import TRADES_PATH, ORDERS_PATH, POSITIONS_PATH
+        save_all(state, TRADES_PATH, ORDERS_PATH, POSITIONS_PATH)
+        # print("\n" + "=" * 50)
+        # print("⏹️  СВЕЧИ ЗАКОНЧИЛИСЬ! ОСТАНОВКА БИРЖИ.")
+        #
+        # # Статистика
+        # print(f"💰 Финальный баланс: {state.balance:.2f}")
+        # print(f"📈 Всего сделок:     {len(state.trades)}")
+        # print(f"📊 Realized PnL:     {state.realized_pnl:.2f}")
+
+        # Сохраняем всё в файлы
+        # from config import TRADES_PATH, ORDERS_PATH, POSITIONS_PATH
+        # from app.services.trades import save_all
+        save_all(state, TRADES_PATH, ORDERS_PATH, POSITIONS_PATH)
+
+        # Красивая статистика
+        print_statistics(state)
+
+        # Мягко останавливаем uvicorn (эмуляция Ctrl+C)
+        os.kill(os.getpid(), signal.SIGINT)
+
         return KlineResponse(
             retCode=0, retMsg="OK",
             result=KlineResult(symbol=symbol, category=category, list=[]),

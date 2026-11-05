@@ -1,12 +1,12 @@
 # b04_plot_symbol.py
-"""График: свечи + SAR + EP + сделки + линии позиций + ордера."""
+"""График: свечи + SAR + EP + сделки + линии позиций + ордера + баланс."""
 
 import os
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from config import CANDLES_SAR_FOLDER, TIMEFRAME, TRADES_PATH, ORDERS_PATH, POSITIONS_PATH
+from config import CANDLES_SAR_FOLDER, TIMEFRAME, TRADES_PATH, ORDERS_PATH, POSITIONS_PATH, INITIAL_BALANCE
 
 
 def plot_symbol(symbol):
@@ -37,14 +37,15 @@ def plot_symbol(symbol):
 
     total_pnl = symbol_trades['pnl'].sum()
 
-    # 3. Фигура
+    # 3. Фигура (2 ряда: 80% график, 20% баланс)
     fig = make_subplots(
         rows=2, cols=1,
         shared_xaxes=True,
-        row_heights=[0.75, 0.25],
+        row_heights=[0.8, 0.2],
+        vertical_spacing=0.05,
         subplot_titles=(
             f"{symbol} | Сделок: {len(symbol_trades)} | PnL: {total_pnl:.2f} USDT",
-            "Volume",
+            "Account Balance",
         ),
     )
 
@@ -75,7 +76,7 @@ def plot_symbol(symbol):
             opacity=0.4,
         ), row=1, col=1)
 
-    # 6.5. Линии позиций (position_history)
+    # 6.5. Линии позиций
     if os.path.exists(POSITIONS_PATH):
         positions = pd.read_csv(POSITIONS_PATH)
         symbol_positions = positions[positions['symbol'] == symbol]
@@ -83,19 +84,14 @@ def plot_symbol(symbol):
         long_x, long_y = [], []
         short_x, short_y = [], []
 
-        # Идем от первой записи до предпоследней
         for i in range(len(symbol_positions) - 1):
             curr = symbol_positions.iloc[i]
             next_ = symbol_positions.iloc[i + 1]
 
-            # Координаты для линии: от времени текущей до времени следующей
             t1 = pd.to_datetime(int(curr['time']), unit='ms')
             t2 = pd.to_datetime(int(next_['time']), unit='ms')
-
-            # Цена, на которой держали позицию в этот промежуток
             price = float(curr['entry_price'])
 
-            # Просто раскидываем по цветам
             if curr['side'] == 'long':
                 long_x.extend([t1, t2, None])
                 long_y.extend([price, price, None])
@@ -103,7 +99,6 @@ def plot_symbol(symbol):
                 short_x.extend([t1, t2, None])
                 short_y.extend([price, price, None])
 
-        # Добавляем на график
         if long_x:
             fig.add_trace(go.Scatter(
                 x=long_x, y=long_y, mode='lines',
@@ -137,21 +132,18 @@ def plot_symbol(symbol):
         entry_price = t['entry_price']
         exit_price  = t['exit_price']
         pnl         = t['pnl']
-        side        = t['side']            # 'long' / 'short'
+        side        = t['side']
 
-        # Вход
         entry_x.append(entry_dt)
         entry_y.append(entry_price)
         entry_text.append('LONG' if side == 'long' else 'SHORT')
         entry_color.append('blue' if side == 'long' else 'purple')
 
-        # Выход
         exit_x.append(exit_dt)
         exit_y.append(exit_price)
         exit_text.append(f"{pnl:+.2f}")
         exit_color.append('green' if pnl > 0 else 'red')
 
-        # Линия
         lines_x.extend([entry_dt, exit_dt, None])
         lines_y.extend([entry_price, exit_price, None])
 
@@ -161,16 +153,14 @@ def plot_symbol(symbol):
         orders = pd.read_csv(orders_path)
         symbol_orders = orders[orders['symbol'] == symbol]
 
-        # Несработавшие (открытые/отменённые) — точки
         ord_x, ord_y, ord_text, ord_color = [], [], [], []
-        # Сработавшие (Filled) — крестики
         fill_x, fill_y, fill_text, fill_color = [], [], [], []
 
         for _, o in symbol_orders.iterrows():
             ts = int(o['createdAt'])
             price = float(o['triggerPrice'])
-            side = o['side']       # 'Buy' / 'Sell'
-            status = o['status']   # 'Filled' / 'Cancelled' / ...
+            side = o['side']
+            status = o['status']
 
             color = 'green' if side == 'Buy' else 'red'
             x = pd.to_datetime(ts, unit='ms')
@@ -186,7 +176,6 @@ def plot_symbol(symbol):
                 ord_text.append(f"{side} {status}")
                 ord_color.append(color)
 
-        # Открытые / отменённые — точки (мелкие)
         if ord_x:
             fig.add_trace(go.Scatter(
                 x=ord_x, y=ord_y,
@@ -197,7 +186,6 @@ def plot_symbol(symbol):
                 hovertemplate='%{text}<br>%{y:.2f}<extra></extra>',
             ), row=1, col=1)
 
-        # Сработавшие — крестики
         if fill_x:
             fig.add_trace(go.Scatter(
                 x=fill_x, y=fill_y,
@@ -218,7 +206,7 @@ def plot_symbol(symbol):
         opacity=0.5,
     ), row=1, col=1)
 
-    # Входы — крупные стрелки вверх/вниз по стороне сделки
+    # Входы
     fig.add_trace(go.Scatter(
         x=entry_x, y=entry_y,
         mode='markers',
@@ -243,17 +231,30 @@ def plot_symbol(symbol):
         hovertemplate='Exit: %{y:.2f}<br>PnL: %{text}<extra></extra>',
     ), row=1, col=1)
 
-    # 8. Volume
-    fig.add_trace(go.Bar(
-        x=dates, y=df['volume'],
-        name='Volume',
-        marker_color='gray',
+    # 8. Кривая баланса (во втором ряду)
+    balance_x = [dates[0]]
+    balance_y = [INITIAL_BALANCE]
+
+    for _, t in symbol_trades.iterrows():
+        exit_ts = int(t['exit_time'])
+        exit_idx = ts_to_idx.get(exit_ts)
+        if exit_idx is not None:
+            balance_x.append(dates[exit_idx])
+            balance_y.append(t['balance'])
+
+    fig.add_trace(go.Scatter(
+        x=balance_x, y=balance_y,
+        mode='lines',
+        line=dict(color='cyan', width=2),
+        name='Balance',
+        fill='tozeroy',
+        fillcolor='rgba(0, 255, 255, 0.1)'
     ), row=2, col=1)
 
     # 9. Настройки
     fig.update_layout(
         xaxis_rangeslider_visible=False,
-        height=900,
+        height=1400,
         hovermode='x unified',
         template='plotly_dark',
         xaxis=dict(type='date', constrain='domain', rangeslider=dict(visible=False)),

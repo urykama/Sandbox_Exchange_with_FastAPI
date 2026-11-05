@@ -67,7 +67,7 @@ CANDLES_COLUMNS = ["timestamp", "open", "high", "low", "close", "volume"]
 # ============================================================
 
 # Стартовый депозит (USDT)
-INITIAL_BALANCE = 100.0
+INITIAL_BALANCE = 1000.0
 
 # Комиссия с каждой сделки (доля, не проценты)
 # 0.001 = 0.1%
@@ -75,7 +75,7 @@ COMMISSION_PCT = 0.001
 
 
 # Минимальный размер ордера (в USDT)
-MIN_ORDER_SIZE = 10.0
+MIN_ORDER_SIZE = 5.0
 
 # Разрешить short?
 ALLOW_SHORT = True
